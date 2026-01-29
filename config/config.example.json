@@ -1,0 +1,14 @@
+{
+    "Mode": "prod",
+    "Database": {
+        "Host": "localhost",
+        "Port": 51001,
+        "User": "your_user",
+        "Password": "your_password",
+        "DBName": "crypto_alert",
+        "SSLMode": "disable"
+    },
+    "Page": {
+        "PageSize": 10
+    }
+}
