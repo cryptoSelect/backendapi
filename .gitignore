@@ -8,8 +8,18 @@
 *.out
 /vendor/
 
-# 本地配置（含敏感信息，勿提交）
+# 测试与覆盖率
+coverage.*
+*.coverprofile
+profile.cov
+
+# Go workspace
+go.work
+go.work.sum
+
+# 本地配置与环境（含敏感信息，勿提交）
 config/config.json
+.env
 
 # IDE
 .idea/
