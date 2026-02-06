@@ -20,9 +20,16 @@ type DBConfig struct {
 }
 
 type ServerConfig struct {
-	Mode     string     `json:"Mode"`
-	Database DBConfig   `json:"Database"`
-	Page     PageConfig `json:"Page"`
+	Mode      string     `json:"Mode"`
+	Database  DBConfig   `json:"Database"`
+	Page      PageConfig `json:"Page"`
+	JWTSecret string     `json:"JWTSecret"` // JWT 签发与校验密钥，生产环境务必修改
+	// TelegramBotName 用于生成绑定链接：https://t.me/<bot>?start=<token>，填 Bot 用户名（不含 @）
+	TelegramBotName string `json:"TelegramBotName"`
+	// TelegramBotToken Bot API token，用于 getMe 与 tgBot 接收 /start
+	TelegramBotToken string `json:"TelegramBotToken"`
+	// BackendAPIBase tgBot 回调 ConfirmTelegramBind 的地址，如 http://localhost:8080
+	BackendAPIBase string `json:"BackendAPIBase"`
 }
 
 type PageConfig struct {

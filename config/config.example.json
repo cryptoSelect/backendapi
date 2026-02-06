@@ -10,5 +10,9 @@
     },
     "Page": {
         "PageSize": 10
-    }
+    },
+    "JWTSecret": "iohkq7e4eixxxx",
+    "TelegramBotName": "",
+    "TelegramBotToken": "your_bot_token_from_botfather",
+    "BackendAPIBase": "http://localhost:8080"
 }

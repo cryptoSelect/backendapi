@@ -1,12 +1,17 @@
 package main
 
 import (
+	"github.com/cryptoSelect/backendapi/api/auth"
 	"github.com/cryptoSelect/backendapi/api/funds"
+	"github.com/cryptoSelect/backendapi/api/subscription"
 	"github.com/cryptoSelect/backendapi/api/symbol"
+	"github.com/cryptoSelect/backendapi/api/user"
 	"github.com/cryptoSelect/backendapi/config"
+	"github.com/cryptoSelect/backendapi/tgBot"
 	"github.com/cryptoSelect/backendapi/utils/logger"
 
 	"github.com/cryptoSelect/public/database"
+	"github.com/cryptoSelect/public/models"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +27,11 @@ func main() {
 		config.Cfg.Database.DBName,
 		config.Cfg.Database.Port,
 	)
+
+	// 迁移用户与订阅表（与 public 库同库）
+	if err := database.AutoMigrate(&models.UserInfo{}, &models.Subscription{}); err != nil {
+		logger.Log.Error("migrate user/subscription failed", map[string]interface{}{"error": err.Error()})
+	}
 
 	// 根据配置设置 GIN 模式
 	if config.Cfg.Mode == "prod" {
@@ -43,6 +53,21 @@ func main() {
 	// FundsRoutes
 	FundsRoutes := api.Group("/funds")
 	funds.SetupFundsRoutes(FundsRoutes)
+
+	// AuthRoutes（登录/注册）
+	AuthRoutes := api.Group("/auth")
+	auth.SetupAuthRoutes(AuthRoutes)
+
+	// UserRoutes（需登录）
+	UserRoutes := api.Group("/user")
+	user.SetupUserRoutes(UserRoutes, auth.RequireAuth)
+
+	// SubscriptionRoutes（需登录）
+	SubRoutes := api.Group("/subscription")
+	subscription.SetupSubscriptionRoutes(SubRoutes, auth.RequireAuth)
+
+	// Telegram Bot 长轮询，收到 /start <token> 时回调 ConfirmTelegramBind
+	go tgBot.Run(config.Cfg.BackendAPIBase)
 
 	logger.Log.Info("Starting API server", map[string]interface{}{"port": ":8080", "mode": config.Cfg.Mode})
 	if err := r.Run(":8080"); err != nil {
