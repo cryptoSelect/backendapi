@@ -47,8 +47,10 @@ func deleteWebhook(token string) {
 func Run(backendBase string) {
 	token := strings.TrimSpace(config.Cfg.TelegramBotToken)
 	if token == "" {
+		logger.Log.Info("tgBot skip: TelegramBotToken not configured", nil)
 		return
 	}
+	logger.Log.Info("tgBot starting", map[string]interface{}{"backend": backendBase})
 	// 删除 webhook，否则 getUpdates 无法接收消息
 	deleteWebhook(token)
 
@@ -95,6 +97,11 @@ func Run(backendBase string) {
 				continue
 			}
 			telegramID := fmt.Sprintf("%d", u.Message.From.ID)
+			tokenPreview := bindToken
+			if len(tokenPreview) > 8 {
+				tokenPreview = tokenPreview[:8] + "..."
+			}
+			logger.Log.Info("tgBot received /start", map[string]interface{}{"telegram_id": telegramID, "token": tokenPreview})
 			confirmBind(confirmURL, bindToken, telegramID)
 		}
 

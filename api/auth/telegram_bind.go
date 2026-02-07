@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cryptoSelect/backendapi/config"
+	"github.com/cryptoSelect/backendapi/utils/logger"
 	"github.com/gin-gonic/gin"
 )
 
@@ -115,6 +116,7 @@ type TgBindConfirmReq struct {
 func ConfirmTelegramBind(c *gin.Context) {
 	var req TgBindConfirmReq
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Log.Error("tg confirm invalid request", map[string]interface{}{"error": err.Error()})
 		c.JSON(http.StatusOK, Response{Error: "invalid request", Code: 400, Data: nil})
 		return
 	}
@@ -125,6 +127,11 @@ func ConfirmTelegramBind(c *gin.Context) {
 	rec, ok := tgBindByToken[req.Token]
 	if !ok {
 		tgBindMu.Unlock()
+		tokenPreview := req.Token
+		if len(tokenPreview) > 8 {
+			tokenPreview = tokenPreview[:8] + "..."
+		}
+		logger.Log.Error("tg confirm token not found", map[string]interface{}{"token": tokenPreview})
 		c.JSON(http.StatusOK, Response{Error: "token not found or expired", Code: 404, Data: nil})
 		return
 	}
@@ -134,9 +141,11 @@ func ConfirmTelegramBind(c *gin.Context) {
 	tgBindMu.Unlock()
 
 	if err := UpdateUserTelegramID(userID, req.TelegramID); err != nil {
+		logger.Log.Error("tg confirm update user failed", map[string]interface{}{"user_id": userID, "error": err.Error()})
 		c.JSON(http.StatusOK, Response{Error: "failed to update user", Code: 500, Data: nil})
 		return
 	}
+	logger.Log.Info("tg confirm db updated", map[string]interface{}{"user_id": userID, "telegram_id": req.TelegramID})
 
 	// 向用户发送 Telegram 消息：绑定成功
 	sendTelegramMessage(req.TelegramID, "绑定成功")
@@ -156,20 +165,29 @@ func cleanupExpiredLocked(now time.Time) {
 func sendTelegramMessage(chatID, text string) {
 	token := strings.TrimSpace(config.Cfg.TelegramBotToken)
 	if token == "" || strings.TrimSpace(chatID) == "" {
+		logger.Log.Error("tg sendMessage skip", map[string]interface{}{"reason": "token or chatID empty"})
 		return
 	}
 	url := "https://api.telegram.org/bot" + token + "/sendMessage"
 	body, _ := json.Marshal(map[string]string{"chat_id": chatID, "text": text})
 	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
+		logger.Log.Error("tg sendMessage newRequest failed", map[string]interface{}{"error": err.Error()})
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		logger.Log.Error("tg sendMessage request failed", map[string]interface{}{"error": err.Error()})
 		return
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		logger.Log.Error("tg sendMessage non-200", map[string]interface{}{"status": resp.StatusCode, "body": string(respBody)})
+		return
+	}
+	logger.Log.Info("tg sendMessage success", map[string]interface{}{"chat_id": chatID})
 }
 
 func newBindToken() (string, error) {
