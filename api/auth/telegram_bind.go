@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -137,6 +138,9 @@ func ConfirmTelegramBind(c *gin.Context) {
 		return
 	}
 
+	// 向用户发送 Telegram 消息：绑定成功
+	sendTelegramMessage(req.TelegramID, "绑定成功")
+
 	c.JSON(http.StatusOK, Response{Error: "", Code: 200, Data: gin.H{"ok": true}})
 }
 
@@ -146,6 +150,26 @@ func cleanupExpiredLocked(now time.Time) {
 			delete(tgBindByToken, k)
 		}
 	}
+}
+
+// sendTelegramMessage 通过 Bot 向用户发送消息（chat_id 即 telegram_id）
+func sendTelegramMessage(chatID, text string) {
+	token := strings.TrimSpace(config.Cfg.TelegramBotToken)
+	if token == "" || strings.TrimSpace(chatID) == "" {
+		return
+	}
+	url := "https://api.telegram.org/bot" + token + "/sendMessage"
+	body, _ := json.Marshal(map[string]string{"chat_id": chatID, "text": text})
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return
+	}
+	resp.Body.Close()
 }
 
 func newBindToken() (string, error) {
