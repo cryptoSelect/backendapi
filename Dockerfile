@@ -18,6 +18,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/backend ./main/ma
 # Run stage
 FROM alpine:3.19
 
+RUN apk add --no-cache tzdata
+
 WORKDIR /app
 
 COPY --from=builder /app/backend .
