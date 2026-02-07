@@ -4,7 +4,7 @@ go 1.25.4
 
 require (
 	github.com/0xA2618/logjson v1.0.0
-	github.com/cryptoSelect/public v1.0.2
+	github.com/cryptoSelect/public v1.0.3
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
@@ -51,6 +51,3 @@ require (
 	gorm.io/driver/postgres v1.6.0 // indirect
 	gorm.io/gorm v1.31.1 // indirect
 )
-
-// 本地开发时使用本地 public 模块，发布前可注释掉
-replace github.com/cryptoSelect/public => ../public

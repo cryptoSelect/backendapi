@@ -1,18 +1,22 @@
-# Build stage（需从项目根目录构建，context 包含 backendapi 与 public）
-FROM docker.mirrors.aliyun.com/library/golang:1.25.4-alpine AS builder
+# Build stage
+FROM golang:1.25.4-alpine AS builder
 
-WORKDIR /build
+WORKDIR /app
 
-COPY public/ ./public/
-COPY backendapi/ ./
-RUN sed -i 's|replace github.com/cryptoSelect/public => ../public|replace github.com/cryptoSelect/public => ./public|' go.mod
+# Copy go mod files first for better cache
+COPY go.mod go.sum ./
 ENV GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
 ENV GOSUMDB=off
 RUN go mod download
+
+# Copy source
+COPY . .
+
+# Build binary (main entry is main/main.go)
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/backend ./main/main.go
 
 # Run stage
-FROM docker.mirrors.aliyun.com/library/alpine:3.19
+FROM alpine:3.19
 
 WORKDIR /app
 
