@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cryptoSelect/backendapi/config"
+	"github.com/cryptoSelect/backendapi/utils/logger"
 )
 
 // Telegram Update 结构（简化）
@@ -32,12 +33,25 @@ type tgUpdatesResp struct {
 	Result []tgUpdate `json:"result"`
 }
 
+// deleteWebhook 删除 webhook，否则 getUpdates 收不到消息
+func deleteWebhook(token string) {
+	url := "https://api.telegram.org/bot" + token + "/deleteWebhook"
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	resp.Body.Close()
+}
+
 // Run 启动 Bot 长轮询，收到 /start <token> 时调用后端确认绑定
 func Run(backendBase string) {
 	token := strings.TrimSpace(config.Cfg.TelegramBotToken)
 	if token == "" {
 		return
 	}
+	// 删除 webhook，否则 getUpdates 无法接收消息
+	deleteWebhook(token)
+
 	base := strings.TrimRight(backendBase, "/")
 	if base == "" {
 		base = "http://localhost:8080"
@@ -92,13 +106,20 @@ func confirmBind(confirmURL, token, telegramID string) {
 	payload, _ := json.Marshal(map[string]string{"token": token, "telegram_id": telegramID})
 	req, err := http.NewRequest("POST", confirmURL, bytes.NewReader(payload))
 	if err != nil {
+		logger.Log.Error("tgBot confirmBind newRequest failed", map[string]interface{}{"error": err.Error()})
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		logger.Log.Error("tgBot confirmBind request failed", map[string]interface{}{"url": confirmURL, "error": err.Error()})
 		return
 	}
 	defer resp.Body.Close()
-	// 忽略响应，仅触发绑定
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logger.Log.Error("tgBot confirmBind response non-200", map[string]interface{}{"status": resp.StatusCode, "body": string(body)})
+		return
+	}
+	logger.Log.Info("tgBot confirmBind success", map[string]interface{}{"telegram_id": telegramID})
 }
