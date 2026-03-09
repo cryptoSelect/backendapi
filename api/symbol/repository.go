@@ -2,6 +2,7 @@ package symbol
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/cryptoSelect/public/database"
@@ -92,16 +93,16 @@ func GetSymbolRecord(c *gin.Context, symbol string, cycle string, shape int, rsi
 			"symbol":           r.Symbol,
 			"cycle":            r.Cycle,
 			"shape":            r.Shape,
-			"rsi":              r.Rsi,
+			"rsi":              sanitizeFloat(r.Rsi),
 			"cross_type":       r.CrossType,
 			"cross_time":       r.CrossTime,
-			"price":            r.Price,
-			"volume":           r.Volume,
-			"taker_buy_volume": r.TakerBuyVolume,
-			"taker_buy_ratio":  r.TakerBuyRatio,
-			"rate":             r.Rate,
+			"price":            sanitizeFloat(r.Price),
+			"volume":           sanitizeFloat(r.Volume),
+			"taker_buy_volume": sanitizeFloat(r.TakerBuyVolume),
+			"taker_buy_ratio":  sanitizeFloat(r.TakerBuyRatio),
+			"rate":             sanitizeFloat(r.Rate),
 			"rate_cycle":       r.RateCycle,
-			"change":           r.Change,
+			"change":           sanitizeFloat(r.Change),
 			"updated_at":       r.UpdatedAt,
 			"vp_signal":        r.VpSignal,
 			"smc_signal":       r.SMCSignal,
@@ -114,4 +115,11 @@ func GetSymbolRecord(c *gin.Context, symbol string, cycle string, shape int, rsi
 		Data:  formatted,
 		Count: int(total),
 	}, nil
+}
+
+func sanitizeFloat(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	return v
 }
